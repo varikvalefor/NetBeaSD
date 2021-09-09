@@ -211,12 +211,12 @@ copyin_vmspace(struct vmspace *vm, const void *uaddr, void *kaddr, size_t len)
 	if (len == 0)
 		return (0);
 
-	if (VMSPACE_IS_KERNEL_P(vm)) {
+	if (VMSPACE_IS_KERNEL_P(vm))
 		return kcopy(uaddr, kaddr, len);
-	}
-	if (__predict_true(vm == curproc->p_vmspace)) {
+
+	if (__predict_true(vm == curproc->p_vmspace))
 		return copyin(uaddr, kaddr, len);
-	}
+
 
 	iov.iov_base = kaddr;
 	iov.iov_len = len;
