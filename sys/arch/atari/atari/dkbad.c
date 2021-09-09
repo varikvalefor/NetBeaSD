@@ -39,8 +39,6 @@ __KERNEL_RCSID(0, "$NetBSD: dkbad.c,v 1.8 2009/03/14 21:04:06 dsl Exp $");
 #include <sys/buf.h>
 #include <sys/dkbad.h>
 
-int isbad(struct dkbad *, int, int, int);
-
 /*
  * Search the bad sector table looking for
  * the specified sector.  Return index if found.
