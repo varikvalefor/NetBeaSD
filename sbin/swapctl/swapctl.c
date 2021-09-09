@@ -282,10 +282,6 @@ main(int argc, char *argv[])
 
 	switch (argc) {
 	case 0:
-		if (command & REQUIRE_PATH)
-			usage();
-		break;
-
 	case 1:
 		if (command & REQUIRE_NOPATH)
 			usage();
