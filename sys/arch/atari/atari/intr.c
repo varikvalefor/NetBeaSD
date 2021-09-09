@@ -61,12 +61,10 @@ intr_init(void)
 {
 	int i;
 
-	for (i = 0; i < (AVEC_MAX - AVEC_MIN + 1); ++i) {
+	for (i = 0; i < (AVEC_MAX - AVEC_MIN + 1); ++i)
 		LIST_INIT(&autovec_list[i]);
-	}
-	for (i = 0; i < (UVEC_MAX - UVEC_MIN + 1); ++i) {
+	for (i = 0; i < (UVEC_MAX - UVEC_MIN + 1); ++i)
 		LIST_INIT(&uservec_list[i]);
-	}
 }
 
 /*
