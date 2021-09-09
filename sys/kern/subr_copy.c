@@ -458,7 +458,6 @@ ucas_critical_enter(lwp_t * const l)
 static inline void
 ucas_critical_exit(lwp_t * const l)
 {
-
 #if !defined(__HAVE_UCAS_MP) && defined(MULTIPROCESSOR)
 	if (ncpu > 1) {
 		membar_exit();
@@ -534,7 +533,6 @@ _ucas_64(volatile uint64_t *uaddr, uint64_t old, uint64_t new, uint64_t *ret)
 int
 ucas_32(volatile uint32_t *uaddr, uint32_t old, uint32_t new, uint32_t *ret)
 {
-
 	ASSERT_SLEEPABLE();
 	CHECK_ALIGNMENT();
 #if (defined(__HAVE_UCAS_MP) && defined(MULTIPROCESSOR)) && \
@@ -550,7 +548,6 @@ ucas_32(volatile uint32_t *uaddr, uint32_t old, uint32_t new, uint32_t *ret)
 int
 ucas_64(volatile uint64_t *uaddr, uint64_t old, uint64_t new, uint64_t *ret)
 {
-
 	ASSERT_SLEEPABLE();
 	CHECK_ALIGNMENT();
 #if (defined(__HAVE_UCAS_MP) && defined(MULTIPROCESSOR)) && \
@@ -573,7 +570,6 @@ __strong_alias(ucas_ptr,ucas_32);
 int
 ufetch_8(const uint8_t *uaddr, uint8_t *valp)
 {
-
 	ASSERT_SLEEPABLE();
 	CHECK_ALIGNMENT();
 	return _ufetch_8(uaddr, valp);
@@ -582,7 +578,6 @@ ufetch_8(const uint8_t *uaddr, uint8_t *valp)
 int
 ufetch_16(const uint16_t *uaddr, uint16_t *valp)
 {
-
 	ASSERT_SLEEPABLE();
 	CHECK_ALIGNMENT();
 	return _ufetch_16(uaddr, valp);
@@ -591,7 +586,6 @@ ufetch_16(const uint16_t *uaddr, uint16_t *valp)
 int
 ufetch_32(const uint32_t *uaddr, uint32_t *valp)
 {
-
 	ASSERT_SLEEPABLE();
 	CHECK_ALIGNMENT();
 	return _ufetch_32(uaddr, valp);
@@ -601,7 +595,6 @@ ufetch_32(const uint32_t *uaddr, uint32_t *valp)
 int
 ufetch_64(const uint64_t *uaddr, uint64_t *valp)
 {
-
 	ASSERT_SLEEPABLE();
 	CHECK_ALIGNMENT();
 	return _ufetch_64(uaddr, valp);
