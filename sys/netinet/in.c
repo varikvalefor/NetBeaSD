@@ -325,7 +325,7 @@ in_socktrim(struct sockaddr_in *ap)
 	ap->sin_len = 0;
 	while (--cp >= cplim)
 		if (*cp) {
-			(ap)->sin_len = cp - (char *) (ap) + 1;
+			ap->sin_len = cp - (char *) (ap) + 1;
 			break;
 		}
 }
