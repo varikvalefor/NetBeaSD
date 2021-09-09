@@ -274,9 +274,9 @@ copyin_proc(struct proc *p, const void *uaddr, void *kaddr, size_t len)
 	int error;
 
 	error = proc_vmspace_getref(p, &vm);
-	if (error) {
+	if (error)
 		return error;
-	}
+
 	error = copyin_vmspace(vm, uaddr, kaddr, len);
 	uvmspace_free(vm);
 
