@@ -218,9 +218,8 @@ kasan_shadow_Nbyte_markvalid(const void *addr, size_t size)
 {
 	size_t i;
 
-	for (i = 0; i < size; i++) {
+	for (i = 0; i < size; i++)
 		kasan_shadow_1byte_markvalid((unsigned long)addr+i);
-	}
 }
 
 static __always_inline void
@@ -319,10 +318,9 @@ kasan_shadow_2byte_isvalid(unsigned long addr, uint8_t *code)
 {
 	int8_t *byte, last;
 
-	if (ADDR_CROSSES_SCALE_BOUNDARY(addr, 2)) {
+	if (ADDR_CROSSES_SCALE_BOUNDARY(addr, 2))
 		return (kasan_shadow_1byte_isvalid(addr, code) &&
 		    kasan_shadow_1byte_isvalid(addr+1, code));
-	}
 
 	byte = kasan_md_addr_to_shad((void *)addr);
 	last = ((addr + 1) & KASAN_SHADOW_MASK) + 1;
