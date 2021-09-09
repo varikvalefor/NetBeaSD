@@ -244,12 +244,12 @@ copyout_vmspace(struct vmspace *vm, const void *kaddr, void *uaddr, size_t len)
 	if (len == 0)
 		return (0);
 
-	if (VMSPACE_IS_KERNEL_P(vm)) {
+	if (VMSPACE_IS_KERNEL_P(vm))
 		return kcopy(kaddr, uaddr, len);
-	}
-	if (__predict_true(vm == curproc->p_vmspace)) {
+
+	if (__predict_true(vm == curproc->p_vmspace))
 		return copyout(kaddr, uaddr, len);
-	}
+
 
 	iov.iov_base = __UNCONST(kaddr); /* XXXUNCONST cast away const */
 	iov.iov_len = len;
