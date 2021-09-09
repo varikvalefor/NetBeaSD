@@ -622,7 +622,6 @@ __strong_alias(ufetch_ptr,ufetch_32);
 int
 ustore_8(uint8_t *uaddr, uint8_t val)
 {
-
 	ASSERT_SLEEPABLE();
 	CHECK_ALIGNMENT();
 	return _ustore_8(uaddr, val);
@@ -631,7 +630,6 @@ ustore_8(uint8_t *uaddr, uint8_t val)
 int
 ustore_16(uint16_t *uaddr, uint16_t val)
 {
-
 	ASSERT_SLEEPABLE();
 	CHECK_ALIGNMENT();
 	return _ustore_16(uaddr, val);
@@ -640,7 +638,6 @@ ustore_16(uint16_t *uaddr, uint16_t val)
 int
 ustore_32(uint32_t *uaddr, uint32_t val)
 {
-
 	ASSERT_SLEEPABLE();
 	CHECK_ALIGNMENT();
 	return _ustore_32(uaddr, val);
