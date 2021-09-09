@@ -293,9 +293,9 @@ copyout_proc(struct proc *p, const void *kaddr, void *uaddr, size_t len)
 	int error;
 
 	error = proc_vmspace_getref(p, &vm);
-	if (error) {
+	if (error)
 		return error;
-	}
+
 	error = copyout_vmspace(vm, kaddr, uaddr, len);
 	uvmspace_free(vm);
 
