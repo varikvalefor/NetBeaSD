@@ -370,12 +370,11 @@ in_mask2len(struct in_addr *mask)
 			break;
 	}
 	y = 0;
-	if (x < sizeof(*mask)) {
+	if (x < sizeof(*mask))
 		for (y = 0; y < NBBY; y++) {
 			if ((p[x] & (0x80 >> y)) == 0)
 				break;
 		}
-	}
 	return x * NBBY + y;
 }
 
