@@ -838,12 +838,10 @@ do_fstab(int add)
 				    "%s: failed to remove %s as swap device\n",
 				    getprogname(), fsspec);
 			}
-			if (cmd[0]) {
-				if (system(cmd) != 0) {
-					warnx("%s: umount failed", fsspec);
-					error = 1;
-					continue;
-				}
+			if (cmd[0] && system(cmd) != 0) {
+				warnx("%s: umount failed", fsspec);
+				error = 1;
+				continue;
 			}
 		}
 
