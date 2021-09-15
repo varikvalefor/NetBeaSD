@@ -1,4 +1,4 @@
-/*	$NetBSD: keyword.c,v 1.57 2019/08/06 18:07:51 kamil Exp $	*/
+/*	$NetBSD: keyword.c,v 1.59 2021/09/14 22:01:17 christos Exp $	*/
 
 /*-
  * Copyright (c) 1990, 1993, 1994
@@ -34,7 +34,7 @@
 #if 0
 static char sccsid[] = "@(#)keyword.c	8.5 (Berkeley) 4/2/94";
 #else
-__RCSID("$NetBSD: keyword.c,v 1.57 2019/08/06 18:07:51 kamil Exp $");
+__RCSID("$NetBSD: keyword.c,v 1.59 2021/09/14 22:01:17 christos Exp $");
 #endif
 #endif /* not lint */
 
@@ -49,11 +49,13 @@ __RCSID("$NetBSD: keyword.c,v 1.57 2019/08/06 18:07:51 kamil Exp $");
 #include <err.h>
 #include <errno.h>
 #include <kvm.h>
+#include <ctype.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <util.h>
 
 #include "ps.h"
 
@@ -103,7 +105,7 @@ static int  vcmp(const void *, const void *);
 VAR var[] = {
 	VAR6("%cpu", "%CPU", 0, pcpu, 0, PCPU),
 	VAR6("%mem", "%MEM", 0, pmem, POFF(p_vm_rssize), INT32),
-	PVAR("acflag", "ACFLG", 0, p_acflag, USHORT, "x"),
+	PVAR("acflag", "ACFLG", 0, p_acflag, PROCACFLAG, "x"),
 	VAR3("acflg", "acflag", ALIAS),
 	VAR3("args", "command", ALIAS),
 	VAR3("blocked", "sigmask", ALIAS),
@@ -120,7 +122,7 @@ VAR var[] = {
 	VAR6("etime", "ELAPSED", 0, elapsed, POFF(p_ustart_sec), TIMEVAL),
 	UID("euid", "EUID", p_uid),
 	VAR4("euser", "EUSER", LJUST, usrname),
-	PVAR("f", "F", 0, p_flag, INT, "x"),
+	PVAR("f", "F", 0, p_flag, PROCFLAG, "x"),
 	VAR3("flags", "f", ALIAS),
 	GID("gid", "GID", p_gid),
 	VAR4("group", "GROUP", LJUST, gname),
@@ -135,7 +137,7 @@ VAR var[] = {
 	PUVAR("isrss", "ISRSS", 0, p_uru_isrss, UINT64, PRId64),
 	PUVAR("ixrss", "IXRSS", 0, p_uru_ixrss, UINT64, PRId64),
 	PVAR("jobc", "JOBC", 0, p_jobc, SHORT, "d"),
-	PVAR("ktrace", "KTRACE", 0, p_traceflag, INT, "x"),
+	PVAR("ktrace", "KTRACE", 0, p_traceflag, KTRACEFLAG, "x"),
 /*XXX*/	PVAR("ktracep", "KTRACEP", 0, p_tracep, KPTR, PRIx64),
 	LVAR("laddr", "LADDR", 0, l_laddr, KPTR, PRIx64),
 	LVAR("lid", "LID", 0, l_lid, INT32, "d"),
@@ -256,7 +258,7 @@ parsevarlist(const char *pp, struct varlist *listptr, struct varent **pos)
 	char *p, *sp, *equalsp;
 
 	/* dup to avoid zapping arguments.  We will free sp later. */
-	p = sp = strdup(pp);
+	p = sp = estrdup(pp);
 
 	/*
 	 * Everything after the first '=' is part of a custom header.
@@ -304,8 +306,7 @@ parsevarlist(const char *pp, struct varlist *listptr, struct varent **pos)
 		 */
 		if ((v = findvar(cp)) == NULL)
 			continue;
-		if ((vent = malloc(sizeof(struct varent))) == NULL)
-			err(EXIT_FAILURE, NULL);
+		vent = emalloc(sizeof(*vent));
 		vent->var = v;
 		if (pos && *pos)
 		    SIMPLEQ_INSERT_AFTER(listptr, *pos, vent, next);
@@ -359,12 +360,16 @@ findvar(const char *p)
 {
 	VAR *v;
 	char *hp;
+	char pp[1024];
+	strlcpy(pp, p, sizeof(pp));
 
-	hp = strchr(p, '=');
+	hp = strchr(pp, '=');
 	if (hp)
 		*hp++ = '\0';
+	for (char *dp = pp; *dp; dp++)
+		*dp = tolower((unsigned char)*dp);
 
-	v = bsearch(p, var, sizeof(var)/sizeof(VAR) - 1, sizeof(VAR), vcmp);
+	v = bsearch(pp, var, __arraycount(var) - 1, sizeof(*var), vcmp);
 	if (v && v->flag & ALIAS)
 		v = findvar(v->header);
 	if (!v) {
@@ -373,7 +378,14 @@ findvar(const char *p)
 		return NULL;
 	}
 
-	if (v && hp) {
+	if (!hp && *p == *pp)
+		return v;
+
+	struct var *newvar = emalloc(sizeof(*newvar));
+	*newvar = *v;
+	v = newvar;
+
+	if (hp) {
 		/*
 		 * Override the header.
 		 *
@@ -382,16 +394,7 @@ findvar(const char *p)
 		 * used multiple times with different headers.  We also
 		 * need to strdup the header.
 		 */
-		struct var *newvar;
-		char *newheader;
-
-		if ((newvar = malloc(sizeof(struct var))) == NULL)
-			err(EXIT_FAILURE, NULL);
-		if ((newheader = strdup(hp)) == NULL)
-			err(EXIT_FAILURE, NULL);
-		memcpy(newvar, v, sizeof(struct var));
-		newvar->header = newheader;
-
+		newvar->header = estrdup(hp);
 		/*
 		 * According to P1003.1-2004, if the header text is null,
 		 * such as -o user=, the field width will be at least as
@@ -399,9 +402,11 @@ findvar(const char *p)
 		 */
 		if (*hp == '\0')
 			newvar->width = strlen(v->header);
-
-		v = newvar;
 	}
+
+	if (*p != *pp)
+		newvar->flag |= ALTPR|LJUST;
+
 	return v;
 }
 

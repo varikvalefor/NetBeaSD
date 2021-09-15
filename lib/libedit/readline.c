@@ -1,4 +1,4 @@
-/*	$NetBSD: readline.c,v 1.165 2021/09/03 12:20:38 christos Exp $	*/
+/*	$NetBSD: readline.c,v 1.168 2021/09/10 18:51:36 rillig Exp $	*/
 
 /*-
  * Copyright (c) 1997 The NetBSD Foundation, Inc.
@@ -31,7 +31,7 @@
 
 #include "config.h"
 #if !defined(lint) && !defined(SCCSID)
-__RCSID("$NetBSD: readline.c,v 1.165 2021/09/03 12:20:38 christos Exp $");
+__RCSID("$NetBSD: readline.c,v 1.168 2021/09/10 18:51:36 rillig Exp $");
 #endif /* not lint && not SCCSID */
 
 #include <sys/types.h>
@@ -123,7 +123,6 @@ int readline_echoing_p = 1;
 int _rl_print_completions_horizontally = 0;
 VFunction *rl_redisplay_function = NULL;
 Function *rl_startup_hook = NULL;
-int rl_did_startup_hook = 0;
 VFunction *rl_completion_display_matches_hook = NULL;
 VFunction *rl_prep_term_function = (VFunction *)rl_prep_terminal;
 VFunction *rl_deprep_term_function = (VFunction *)rl_deprep_terminal;
@@ -425,8 +424,7 @@ readline(const char *p)
 
 	if (e == NULL || h == NULL)
 		rl_initialize();
-	if (rl_did_startup_hook == 0 && rl_startup_hook) {
-		rl_did_startup_hook = 1;
+	if (rl_startup_hook) {
 		(*rl_startup_hook)(NULL, 0);
 	}
 	tty_init(e);
@@ -598,7 +596,7 @@ get_history_event(const char *cmd, int *cindex, int qchar)
 		if (sub && cmd[idx] == '?')
 			break;
 		if (!sub && (cmd[idx] == ':' || cmd[idx] == ' '
-				    || cmd[idx] == '\t' || cmd[idx] == qchar))
+		    || cmd[idx] == '\t' || cmd[idx] == qchar))
 			break;
 		idx++;
 	}
@@ -624,8 +622,7 @@ get_history_event(const char *cmd, int *cindex, int qchar)
 
 	if (sub) {
 		if (pat != last_search_pat) {
-			if (last_search_pat)
-				el_free(last_search_pat);
+			el_free(last_search_pat);
 			last_search_pat = pat;
 		}
 		ret = history_search(pat, -1);
@@ -642,9 +639,8 @@ get_history_event(const char *cmd, int *cindex, int qchar)
 	}
 
 	if (sub && len) {
-		if (last_search_match && last_search_match != pat)
-			el_free(last_search_match);
-		last_search_match = pat;
+		el_free(last_search_match);
+		last_search_match = strdup(pat);
 	}
 
 	if (pat != last_search_pat)
@@ -676,7 +672,7 @@ getfrom(const char **cmdp, char **fromp, const char *search, int delim)
 	for (; *cmd && *cmd != delim; cmd++) {
 		if (*cmd == '\\' && cmd[1] == delim)
 			cmd++;
-		if (len >= size) {
+		if (len - 1 >= size) {
 			char *nwhat;
 			nwhat = el_realloc(what, (size <<= 1) * sizeof(*nwhat));
 			if (nwhat == NULL) {
@@ -707,6 +703,7 @@ getfrom(const char **cmdp, char **fromp, const char *search, int delim)
 	}
 	if (!*cmd) {
 		el_free(what);
+		*fromp = NULL;
 		return -1;
 	}
 
@@ -715,6 +712,7 @@ getfrom(const char **cmdp, char **fromp, const char *search, int delim)
 
 	if (!*cmd) {
 		el_free(what);
+		*fromp = NULL;
 		return -1;
 	}
 	return 1;
@@ -728,6 +726,7 @@ getto(const char **cmdp, char **top, const char *from, int delim)
 	size_t from_len = strlen(from);
 	const char *cmd = *cmdp;
 	char *with = el_realloc(*top, size * sizeof(*with));
+	*top = NULL;
 	if (with == NULL)
 		goto out;
 
@@ -825,7 +824,8 @@ _history_expand_command(const char *command, size_t offs, size_t cmdlen,
 		} else {
 			int	qchar;
 
-			qchar = (offs > 0 && command[offs - 1] == '"')? '"':0;
+			qchar = (offs > 0 && command[offs - 1] == '"')
+			    ? '"' : '\0';
 			ptr = get_history_event(command + offs, &idx, qchar);
 		}
 		has_mods = command[offs + (size_t)idx] == ':';
@@ -848,7 +848,7 @@ _history_expand_command(const char *command, size_t offs, size_t cmdlen,
 	/* Now parse any word designators */
 
 	if (*cmd == '%')	/* last word matched by ?pat? */
-		tmp = strdup(last_search_match? last_search_match:"");
+		tmp = strdup(last_search_match ? last_search_match : "");
 	else if (strchr("^*$-0123456789", *cmd)) {
 		start = end = -1;
 		if (*cmd == '^')
@@ -903,7 +903,7 @@ _history_expand_command(const char *command, size_t offs, size_t cmdlen,
 		switch (*cmd) {
 		case ':':
 			continue;
-		case 'h': 	/* remove trailing path */
+		case 'h':	/* remove trailing path */
 			if ((aptr = strrchr(tmp, '/')) != NULL)
 				*aptr = '\0';
 			continue;
@@ -928,26 +928,30 @@ _history_expand_command(const char *command, size_t offs, size_t cmdlen,
 				continue;
 			/*FALLTHROUGH*/
 		case 's':
-			delim = *(++cmd), cmd++;	/* XXX: check */
-			if ((ev = getfrom(&cmd, &from, search, delim)) != 1) {
-				el_free(tmp);
-				return ev;
-			}
-			if ((ev = getto(&cmd, &to, from, delim)) != 1) {
-				el_free(tmp);
-				return ev;
-			}
+			ev = -1;
+			delim = *++cmd;
+			if (delim == '\0' || *++cmd == '\0')
+				goto out;
+			if ((ev = getfrom(&cmd, &from, search, delim)) != 1)
+				goto out;
+			if ((ev = getto(&cmd, &to, from, delim)) != 1)
+				goto out;
 			aptr = _rl_compat_sub(tmp, from, to, g_on);
 			if (aptr) {
 				el_free(tmp);
 				tmp = aptr;
 			}
 			g_on = 0;
+			cmd--;
 			continue;
 		}
 	}
 	*result = tmp;
 	return p_on ? 2 : 1;
+out:
+	el_free(tmp);
+	return ev;
+	
 }
 
 
@@ -1399,7 +1403,7 @@ read_history(const char *filename)
 		return errno;
 	errno = 0;
 	if (history(h, &ev, H_LOAD, filename) == -1)
-	    return errno ? errno : EINVAL;
+		return errno ? errno : EINVAL;
 	if (history(h, &ev, H_GETSIZE) == 0)
 		history_length = ev.num;
 	if (history_length < 0)
@@ -2077,7 +2081,7 @@ static unsigned char
 rl_bind_wrapper(EditLine *el __attribute__((__unused__)), unsigned char c)
 {
 	if (map[c] == NULL)
-	    return CC_ERROR;
+		return CC_ERROR;
 
 	_rl_update_pos();
 

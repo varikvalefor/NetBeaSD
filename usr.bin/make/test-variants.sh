@@ -1,5 +1,5 @@
 #! /bin/sh
-# $NetBSD: test-variants.sh,v 1.10 2021/04/03 11:08:40 rillig Exp $
+# $NetBSD: test-variants.sh,v 1.12 2021/09/12 10:28:40 rillig Exp $
 #
 # Build several variants of make and run the tests on them.
 #
@@ -10,6 +10,7 @@
 set -eu
 
 failed="no"
+filter="${1-}"
 
 fail() {
 	echo "failed"
@@ -17,12 +18,17 @@ fail() {
 }
 
 testcase() {
+	case "$*" in
+	*"$filter"*) ;;
+	*) return;;
+	esac
+
 	echo "===> Running $*"
 
 	env -i PATH="$PATH" USETOOLS="no" "$@" \
 		sh -ce "make -s cleandir" \
 	&& env -i PATH="$PATH" USETOOLS="no" "$@" \
-		sh -ce "make -ks all" \
+		sh -ce "make -ks -j6 dependall" \
 	&& size *.o make \
 	&& env -i PATH="$PATH" USETOOLS="no" MALLOC_OPTIONS="JA" \
 		_MKMSG_TEST=":" "$@" \
@@ -31,7 +37,7 @@ testcase() {
 }
 
 
-testcase # just the plain default options
+testcase DESCR="just the plain default options"
 
 # Try a different compiler, with slightly different warnings and error
 # messages.  One feature that is missing from GCC is a little stricter
@@ -120,10 +126,16 @@ testcase USER_CFLAGS="-O0 -ggdb"
 # Ensure that every inline function is declared as MAKE_ATTR_UNUSED.
 testcase USER_CPPFLAGS="-Dinline="
 
+# Is expected to fail with "<stdbool.h> is included in pre-C99 mode".
 testcase USER_CFLAGS="-std=c90" USER_CPPFLAGS="-Dinline="
+
+# This workaround is necessary on NetBSD 9.99 since main.c includes
+# <sys/sysctl.h>, which includes <stdbool.h> even in pre-C99 mode.
+testcase USER_CFLAGS="-std=c90" USER_CPPFLAGS="-Dinline= -DUSE_C99_BOOLEAN"
 
 #testcase USER_CFLAGS="-std=c90 -pedantic" USER_CPPFLAGS="-Dinline="
 
+# Is expected to fail with "<stdbool.h> is included in pre-C99 mode".
 testcase USER_CFLAGS="-ansi" USER_CPPFLAGS="-Dinline="
 
 # config.h does not allow overriding these features

@@ -1,4 +1,4 @@
-/*	$NetBSD: stdio.h,v 1.99 2020/03/20 01:08:42 joerg Exp $	*/
+/*	$NetBSD: stdio.h,v 1.104 2021/09/11 20:05:33 rillig Exp $	*/
 
 /*-
  * Copyright (c) 1990, 1993
@@ -66,11 +66,6 @@ typedef __va_list va_list;
 
 #include <sys/null.h>
 
-/*      
- * This is fairly grotesque, but pure ANSI code must not inspect the
- * innards of an fpos_t anyway.  The library internally uses off_t,
- * which we assume is exactly as big as eight chars.
- */
 typedef struct __sfpos {
 	__off_t _pos;
 	__mbstate_t _mbstate_in, _mbstate_out;
@@ -108,13 +103,12 @@ struct __sbuf {
  * _lbfsize is used only to make the inline line-buffered output stream
  * code as compact as possible.
  *
- * _ub, _up, and _ur are used when ungetc() pushes back more characters
- * than fit in the current _bf, or when ungetc() pushes back a character
- * that does not match the previous one in _bf.  When this happens,
- * _ub._base becomes non-nil (i.e., a stream has ungetc() data iff
- * _ub._base!=NULL) and _up and _ur save the current values of _p and _r.
- *
- * NB: see WARNING above before changing the layout of this structure!
+ * _ub (via _ext and struct __sfileext), _up, and _ur are used when ungetc()
+ * pushes back more characters than fit in the current _bf, or when ungetc()
+ * pushes back a character that does not match the previous one in _bf.
+ * When this happens, _ext._base becomes non-nil (i.e., a stream has ungetc()
+ * data iff _ub._base != NULL) and _up and _ur save the current values of _p
+ * and _r.
  */
 typedef	struct __sFILE {
 	unsigned char *_p;	/* current position in (some) buffer */
@@ -325,7 +319,7 @@ int	getchar_unlocked(void);
 int	putc_unlocked(int, FILE *);
 int	putchar_unlocked(int);
 __END_DECLS
-#endif /* C99 || _POSIX_C_SOURCE >= 1995056 || _XOPEN_SOURCE >= 500 || ... */
+#endif /* C99 || _POSIX_C_SOURCE >= 199506 || _XOPEN_SOURCE >= 500 || ... */
 
 /*
  * Functions defined in POSIX 1003.2 and XPG2 or later.
@@ -344,7 +338,7 @@ __END_DECLS
 #endif
 
 /*
- * Functions defined in ISO XPG4.2, ISO C99, POSIX 1003.1-2001 or later.
+ * Functions defined in XPG4.2, ISO C99, POSIX 1003.1-2001 or later.
  */
 #if defined(__STDIO_C99_FEATURES) || (_POSIX_C_SOURCE - 0) >= 200112L || \
     (defined(_XOPEN_SOURCE) && defined(_XOPEN_SOURCE_EXTENDED)) || \
@@ -389,8 +383,7 @@ __END_DECLS
 #endif /* (_POSIX_C_SOURCE - 0) >= 200112L || _XOPEN_SOURCE >= 500 || ... */
 
 /*
- * Functions defined in ISO C99.  Still put under _NETBSD_SOURCE due to
- * backward compatible.
+ * Functions defined in ISO C99.
  */
 #if defined(__STDIO_C99_FEATURES)
 __BEGIN_DECLS

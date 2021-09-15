@@ -1,7 +1,7 @@
-# $NetBSD: Makefile,v 1.109 2021/09/03 22:44:09 rillig Exp $
+# $NetBSD: Makefile,v 1.112 2021/09/13 22:09:06 rillig Exp $
 
 NOMAN=		# defined
-MAX_MESSAGE=	346		# see lint1/err.c
+MAX_MESSAGE=	347		# see lint1/err.c
 
 .include <bsd.own.mk>
 
@@ -122,6 +122,8 @@ FILES+=		decl.c
 FILES+=		decl.exp
 FILES+=		decl_arg.c
 FILES+=		decl_arg.exp
+FILES+=		decl_direct_abstract.c
+FILES+=		decl_direct_abstract.exp
 FILES+=		decl_enum.c
 FILES+=		decl_enum.exp
 FILES+=		decl_enum_c90.c
@@ -203,6 +205,8 @@ FILES+=		lex_integer_ilp32.c
 FILES+=		lex_integer_ilp32.exp
 FILES+=		lex_string.c
 FILES+=		lex_string.exp
+FILES+=		lex_whitespace.c
+FILES+=		lex_whitespace.exp
 FILES+=		lex_wide_char.c
 FILES+=		lex_wide_char.exp
 FILES+=		lex_wide_string.c

@@ -1,4 +1,4 @@
-/* $NetBSD: decl.c,v 1.235 2021/09/05 16:15:05 rillig Exp $ */
+/* $NetBSD: decl.c,v 1.240 2021/09/13 06:11:51 rillig Exp $ */
 
 /*
  * Copyright (c) 1996 Christopher G. Demetriou.  All Rights Reserved.
@@ -38,7 +38,7 @@
 
 #include <sys/cdefs.h>
 #if defined(__RCSID) && !defined(lint)
-__RCSID("$NetBSD: decl.c,v 1.235 2021/09/05 16:15:05 rillig Exp $");
+__RCSID("$NetBSD: decl.c,v 1.240 2021/09/13 06:11:51 rillig Exp $");
 #endif
 
 #include <sys/param.h>
@@ -1398,11 +1398,19 @@ add_function(sym_t *decl, sym_t *args)
 		dcs->d_next->d_func_args = args;
 	}
 
+	/*
+	 * XXX: What is this code doing on a semantic level, and why?
+	 * Returning decl leads to the wrong function types in msg_347.
+	 */
 	tpp = &decl->s_type;
 	while (*tpp != NULL && *tpp != dcs->d_next->d_type)
+		/*
+		 * XXX: accessing INT->t_subt feels strange, even though it
+		 * may even be guaranteed to be NULL.
+		 */
 		tpp = &(*tpp)->t_subt;
 	if (*tpp == NULL)
-	    return decl;
+	    return decl;	/* see msg_347 */
 
 	*tpp = tp = getblk(sizeof(*tp));
 	tp->t_tspec = FUNC;
@@ -1423,7 +1431,6 @@ new_style_function(sym_t *decl, sym_t *args)
 {
 	sym_t	*arg, *sym;
 	scl_t	sc;
-	int	n;
 
 	/*
 	 * Declarations of structs/unions/enums in param lists are legal,
@@ -1437,20 +1444,18 @@ new_style_function(sym_t *decl, sym_t *args)
 		}
 	}
 
-	n = 1;
 	for (arg = args; arg != NULL; arg = arg->s_next) {
-		if (arg->s_type->t_tspec == VOID) {
-			if (n > 1 || arg->s_next != NULL) {
-				/* void must be sole parameter */
-				error(60);
-				arg->s_type = gettyp(INT);
-			}
+		if (arg->s_type->t_tspec == VOID &&
+		    !(arg == args && arg->s_next == NULL)) {
+			/* void must be sole parameter */
+			error(60);
+			arg->s_type = gettyp(INT);
 		}
-		n++;
 	}
 
-	/* return NULL if first param is VOID */
-	return args != NULL && args->s_type->t_tspec != VOID ? args : NULL;
+	if (args == NULL || args->s_type->t_tspec == VOID)
+		return NULL;
+	return args;
 }
 
 /*
@@ -2081,8 +2086,9 @@ check_redeclaration(sym_t *dsym, bool *dowarn)
 		return true;
 	}
 	if (!eqtype(rsym->s_type, dsym->s_type, false, false, dowarn)) {
-		/* redeclaration of %s */
-		error(27, dsym->s_name);
+		/* redeclaration of '%s' with type '%s', expected '%s' */
+		error(347, dsym->s_name,
+		    type_name(dsym->s_type), type_name(rsym->s_type));
 		print_previous_declaration(-1, rsym);
 		return true;
 	}
@@ -2861,6 +2867,16 @@ abstract_name(void)
 	if (dcs->d_ctx == PROTO_ARG)
 		sym->s_arg = true;
 
+	/*
+	 * At this point, dcs->d_type contains only the basic type.  That
+	 * type will be updated later, adding pointers, arrays and functions
+	 * as necessary.
+	 */
+	/*
+	 * XXX: This is not the correct type.  For example in msg_347, it is
+	 * the type of the last prototype parameter, but it should rather be
+	 * the return type of the function.
+	 */
 	sym->s_type = dcs->d_type;
 	dcs->d_redeclared_symbol = NULL;
 	dcs->d_vararg = false;

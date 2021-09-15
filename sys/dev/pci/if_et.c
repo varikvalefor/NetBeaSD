@@ -1,4 +1,4 @@
-/*	$NetBSD: if_et.c,v 1.33 2021/05/08 00:27:02 thorpej Exp $	*/
+/*	$NetBSD: if_et.c,v 1.35 2021/09/10 14:56:26 jakllsch Exp $	*/
 /*	$OpenBSD: if_et.c,v 1.12 2008/07/11 09:29:02 kevlo $	*/
 /*
  * Copyright (c) 2007 The DragonFly Project.  All rights reserved.
@@ -37,10 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: if_et.c,v 1.33 2021/05/08 00:27:02 thorpej Exp $");
-
-#include "opt_inet.h"
-#include "vlan.h"
+__KERNEL_RCSID(0, "$NetBSD: if_et.c,v 1.35 2021/09/10 14:56:26 jakllsch Exp $");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -61,14 +58,6 @@ __KERNEL_RCSID(0, "$NetBSD: if_et.c,v 1.33 2021/05/08 00:27:02 thorpej Exp $");
 #include <net/if_media.h>
 #include <net/if_ether.h>
 #include <net/if_arp.h>
-
-#ifdef INET
-#include <netinet/in.h>
-#include <netinet/in_systm.h>
-#include <netinet/in_var.h>
-#include <netinet/ip.h>
-#include <netinet/if_inarp.h>
-#endif
 
 #include <net/bpf.h>
 
